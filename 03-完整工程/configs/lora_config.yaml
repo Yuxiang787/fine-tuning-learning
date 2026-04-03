@@ -1,0 +1,41 @@
+# LoRA 微调配置文件
+# 用于 facebook/opt-125m 模型的指令微调
+
+# 模型配置
+model_name: "facebook/opt-125m"
+tokenizer_name: null  # null 表示使用 model_name
+
+# 数据配置
+data: "data.jsonl"
+validation_data: null
+max_length: 256
+
+# LoRA 配置
+use_lora: true
+lora_r: 8
+lora_alpha: 16
+lora_dropout: 0.1
+target_modules: null  # null 表示自动选择
+
+# 训练配置
+output_dir: "./output/lora_opt125m"
+num_epochs: 3
+batch_size: 4
+learning_rate: 2e-4
+warmup_steps: 10
+gradient_accumulation_steps: 2
+
+# 日志与保存
+logging_steps: 10
+save_strategy: "epoch"
+save_steps: 500
+report_to: "none"  # none, wandb, tensorboard
+run_name: "lora-opt125m"
+
+# 性能配置
+fp16: true
+bf16: false
+dataloader_workers: 0
+
+# 其他
+seed: 42

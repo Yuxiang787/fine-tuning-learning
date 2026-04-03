@@ -1,0 +1,20 @@
+{"instruction": "将以下中文翻译成英文", "input": "你好，世界！", "output": "Hello, world!"}
+{"instruction": "将以下中文翻译成英文", "input": "今天天气很好", "output": "The weather is very nice today."}
+{"instruction": "将以下中文翻译成英文", "input": "我喜欢学习编程语言", "output": "I like learning programming languages."}
+{"instruction": "将以下英文翻译成中文", "input": "Good morning!", "output": "早上好！"}
+{"instruction": "将以下英文翻译成中文", "input": "How are you doing today?", "output": "你今天过得怎么样？"}
+{"instruction": "判断以下句子的情感倾向", "input": "这部电影太精彩了！", "output": "正面"}
+{"instruction": "判断以下句子的情感倾向", "input": "今天心情很糟糕", "output": "负面"}
+{"instruction": "判断以下句子的情感倾向", "input": "一般般吧，没什么特别的", "output": "中性"}
+{"instruction": "回答以下数学问题", "input": "15 + 27 = ?", "output": "42"}
+{"instruction": "回答以下数学问题", "input": "100 - 38 = ?", "output": "62"}
+{"instruction": "续写以下故事", "input": "从前有一座山，山里", "output": "从前有一座山，山里住着一位聪明的少年。他每天都会去山顶读书，有一天他发现了一本古老的书籍..."}
+{"instruction": "生成一个简短的产品描述", "input": "智能手表，防水，心率监测", "output": "这款智能手表具备生活防水功能，可全天候监测您的心率，是您健康生活的得力助手。"}
+{"instruction": "将以下文本分类", "input": "苹果公司发布了新款 iPhone", "output": "科技"}
+{"instruction": "将以下文本分类", "input": "昨晚的足球比赛非常精彩", "output": "体育"}
+{"instruction": "提取以下句子的关键词", "input": "机器学习是人工智能的一个分支，它让计算机能够从数据中学习", "output": "机器学习，人工智能，数据，学习"}
+{"instruction": "以下面这个词造句", "input": "坚持不懈", "output": "只有坚持不懈地努力，才能在学习上取得优异的成绩。"}
+{"instruction": "解释以下概念", "input": "什么是神经网络？", "output": "神经网络是一种模仿人脑神经元结构的计算模型，由大量相互连接的节点组成，用于处理复杂的数据模式识别任务。"}
+{"instruction": "将以下句子改写为疑问句", "input": "你今天要去学校", "output": "你今天要去学校吗？"}
+{"instruction": "找出以下句子的主语", "input": "小明在公园里踢足球", "output": "小明"}
+{"instruction": "计算以下矩形的面积", "input": "长 10cm，宽 5cm", "output": "面积 = 长 × 宽 = 10 × 5 = 50 平方厘米"}
