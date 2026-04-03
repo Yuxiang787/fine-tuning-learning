@@ -30,10 +30,10 @@ python run.py --config configs/full_finetune_config.yaml
 
 ```bash
 # 评测 LoRA 模型
-python eval.py --adapter ./output/lora_opt125m
+python eval.py --adapter ./output/lora_qwen0.5b
 
 # 评测全量微调模型
-python eval.py --model ./output/full_opt125m
+python eval.py --model ./output/full_qwen0.5b
 
 # 指定评测数据
 python eval.py --adapter ./output --data eval_data.jsonl --num_samples 20
@@ -43,7 +43,7 @@ python eval.py --adapter ./output --data eval_data.jsonl --num_samples 20
 
 ```bash
 # 交互模式
-python inference.py --adapter ./output/lora_opt125m --interactive
+python inference.py --adapter ./output/lora_qwen0.5b --interactive
 
 # 演示模式
 python inference.py --adapter ./output --demo
@@ -88,22 +88,22 @@ python inference.py --adapter ./output --demo
 
 ```yaml
 # 模型配置
-model_name: "facebook/opt-125m"
+model_name: "Qwen/Qwen2.5-0.5B"
 
 # 数据配置
 data: "data.jsonl"
-max_length: 256
+max_length: 512
 
 # LoRA 配置
 use_lora: true
-lora_r: 8
-lora_alpha: 16
+lora_r: 16
+lora_alpha: 32
 lora_dropout: 0.1
 
 # 训练配置
-output_dir: "./output/lora_opt125m"
+output_dir: "./output/lora_qwen0.5b"
 num_epochs: 3
-batch_size: 4
+batch_size: 8
 learning_rate: 2e-4
 
 # 性能配置
@@ -117,8 +117,9 @@ use_lora: false
 full_finetune: true
 
 # 全量微调需要更小的学习率
-learning_rate: 2e-5
-batch_size: 2
+learning_rate: 1e-5
+batch_size: 1
+gradient_accumulation_steps: 8
 ```
 
 ## 命令行参数
@@ -128,14 +129,14 @@ batch_size: 2
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--config` | 配置文件路径 | - |
-| `--model_name` | 模型名称 | facebook/opt-125m |
+| `--model_name` | 模型名称 | Qwen/Qwen2.5-0.5B |
 | `--data` | 训练数据 | data.jsonl |
 | `--output_dir` | 输出目录 | ./output |
 | `--num_epochs` | 训练轮数 | 3 |
-| `--batch_size` | 批次大小 | 4 |
+| `--batch_size` | 批次大小 | 8 |
 | `--learning_rate` | 学习率 | 2e-4 |
-| `--lora_r` | LoRA 秩 | 8 |
-| `--lora_alpha` | LoRA alpha | 16 |
+| `--lora_r` | LoRA 秩 | 16 |
+| `--lora_alpha` | LoRA alpha | 32 |
 | `--full_finetune` | 全量微调 | 否 |
 | `--fp16` | FP16 混合精度 | 是 |
 | `--report_to` | 日志工具 | none |
@@ -144,7 +145,7 @@ batch_size: 2
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--base_model` | 基础模型 | facebook/opt-125m |
+| `--base_model` | 基础模型 | Qwen/Qwen2.5-0.5B |
 | `--adapter` | LoRA 适配器路径 | - |
 | `--model` | 微调模型路径 | - |
 | `--data` | 评测数据 | data.jsonl |
@@ -155,7 +156,7 @@ batch_size: 2
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--base_model` | 基础模型 | facebook/opt-125m |
+| `--base_model` | 基础模型 | Qwen/Qwen2.5-0.5B |
 | `--adapter` | LoRA 适配器路径 | - |
 | `--model` | 微调模型路径 | - |
 | `--demo` | 演示模式 | 否 |
@@ -174,7 +175,7 @@ dataset = FineTuningDataset(
     format_template="...",
     format_template_no_input="..."
 )
-dataset.load().format().tokenize(tokenizer, max_length=256)
+dataset.load().format().tokenize(tokenizer, max_length=512)
 hf_dataset = dataset.to_huggingface()
 
 # 方式 2: 使用便捷函数
@@ -191,8 +192,8 @@ dataset = load_dataset(
 from src.models import load_model, load_tokenizer, apply_lora, create_lora_config
 
 # 加载
-tokenizer = load_tokenizer("facebook/opt-125m")
-model, device = load_model("facebook/opt-125m")
+tokenizer = load_tokenizer("Qwen/Qwen2.5-0.5B")
+model, device = load_model("Qwen/Qwen2.5-0.5B")
 
 # 应用 LoRA
 lora_config = create_lora_config(r=8, alpha=16)
@@ -223,7 +224,7 @@ trainer.train()
 from src.eval import Evaluator, load_eval_data
 
 # 加载模型
-evaluator = Evaluator.from_lora("facebook/opt-125m", "./output")
+evaluator = Evaluator.from_lora("Qwen/Qwen2.5-0.5B", "./output")
 
 # 评测
 data = load_eval_data("eval.jsonl")
@@ -263,7 +264,7 @@ python run.py --report_to wandb --run_name my_experiment
 
 ```
 output/
-└── lora_opt125m/
+└── lora_qwen0.5b/
     ├── adapter_config.json       # LoRA 配置
     ├── adapter_model.safetensors # LoRA 权重
     ├── tokenizer.json            # 分词器

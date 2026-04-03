@@ -1,13 +1,13 @@
 # 全量微调配置文件
 # 适用于小模型的完整参数微调
 
-# 模型配置
-model_name: "facebook/opt-125m"
+# 模型配置 - M4 24GB 建议全量微调 0.5B
+model_name: "Qwen/Qwen2.5-0.5B"
 
 # 数据配置
 data: "data.jsonl"
 validation_data: null
-max_length: 256
+max_length: 512
 
 # 微调模式
 use_lora: false
@@ -15,12 +15,12 @@ full_finetune: true
 
 # 训练配置
 # 全量微调需要更小的学习率和 batch size
-output_dir: "./output/full_opt125m"
+output_dir: "./output/full_qwen0.5b"
 num_epochs: 3
-batch_size: 2
-learning_rate: 2e-5
+batch_size: 1
+learning_rate: 1e-5
 warmup_steps: 10
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 8
 weight_decay: 0.01
 max_grad_norm: 1.0
 
@@ -28,7 +28,7 @@ max_grad_norm: 1.0
 logging_steps: 10
 save_strategy: "epoch"
 report_to: "none"
-run_name: "full-opt125m"
+run_name: "full-qwen0.5b-m4"
 
 # 性能配置
 fp16: true

@@ -47,7 +47,7 @@ def create_trainer(
         save_strategy=config.training.save_strategy,
         save_total_limit=config.training.save_total_limit,
         gradient_accumulation_steps=config.training.gradient_accumulation_steps,
-        fp16=config.training.fp16 and get_device().type == "cuda",
+        fp16=config.training.fp16 and get_device().type in ["cuda", "mps"],
         dataloader_num_workers=config.training.dataloader_num_workers,
         seed=config.training.seed,
         report_to=config.training.report_to,

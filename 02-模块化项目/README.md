@@ -101,8 +101,8 @@ dataset = create_training_dataset(
 ```python
 from model import load_tokenizer, load_base_model, apply_lora
 
-tokenizer = load_tokenizer("facebook/opt-125m")
-model = load_base_model("facebook/opt-125m")
+tokenizer = load_tokenizer("Qwen/Qwen2.5-0.5B")
+model = load_base_model("Qwen/Qwen2.5-0.5B")
 model, trainable, total = apply_lora(model, lora_config)
 ```
 
@@ -175,17 +175,17 @@ python evaluate.py --adapter ./output --num-samples 20
 | `--config` | 配置文件路径 | - |
 | `--data` | 训练数据 | data.jsonl |
 | `--output` | 输出目录 | ./output |
-| `--model` | 模型名称 | facebook/opt-125m |
+| `--model` | 模型名称 | Qwen/Qwen2.5-0.5B |
 | `--epochs` | 训练轮数 | 3 |
-| `--batch-size` | 批次大小 | 4 |
+| `--batch-size` | 批次大小 | 8 |
 | `--lr` | 学习率 | 2e-4 |
-| `--lora-r` | LoRA 秩 | 8 |
+| `--lora-r` | LoRA 秩 | 16 |
 
 ### evaluate.py
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--base-model` | 基础模型 | facebook/opt-125m |
+| `--base-model` | 基础模型 | Qwen/Qwen2.5-0.5B |
 | `--adapter` | 适配器路径 | ./lora_output |
 | `--data` | 测试数据 | data.jsonl |
 | `--num-samples` | 评测样本数 | 10 |

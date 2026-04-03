@@ -68,12 +68,20 @@ def load_model(
         (模型，设备)
     """
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
 
     if torch_dtype is None:
-        torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
+        torch_dtype = torch.float16 if device.type in ["cuda", "mps"] else torch.float32
 
-    # 量化加载
+    if device.type == "mps" and (load_in_8bit or load_in_4bit):
+        raise ValueError("MPS 设备暂不支持 bitsandbytes 4-bit/8-bit 量化加载，请关闭 load_in_4bit/load_in_8bit。")
+
+    # 量化加载 (QLoRA)
     if load_in_8bit or load_in_4bit:
         from transformers import BitsAndBytesConfig
 
@@ -91,14 +99,16 @@ def load_model(
             device_map="auto",
         )
     else:
+        # transformers >= 4.48.0 supports device_map="auto" on MPS
+        use_device_map = device.type in ["cuda", "mps"]
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             trust_remote_code=trust_remote_code,
             torch_dtype=torch_dtype,
-            device_map="auto" if device.type == "cuda" else None,
+            device_map="auto" if use_device_map else None,
         )
 
-        if device.type != "cuda":
+        if not use_device_map:
             model = model.to(device)
 
     return model, device
@@ -120,7 +130,11 @@ def load_peft_model(
     Returns:
         (PEFT 模型，分词器，设备)
     """
-    device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = device or (
+        torch.device("mps") if torch.backends.mps.is_available()
+        else torch.device("cuda") if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
 
     # 加载分词器
     tokenizer = load_tokenizer(base_model_name)

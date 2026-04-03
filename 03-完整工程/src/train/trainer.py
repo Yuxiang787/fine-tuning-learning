@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def create_training_args(
     output_dir: str,
     num_epochs: int = 3,
-    batch_size: int = 4,
+    batch_size: int = 8,
     learning_rate: float = 2e-4,
     warmup_steps: int = 10,
     logging_steps: int = 10,
@@ -39,7 +39,8 @@ def create_training_args(
     dataloader_workers: int = 0,
     seed: int = 42,
     report_to: str = "none",
-    run_name: str = "finetune",
+    run_name: str = "lora-qwen0.5b-m4",
+    device_type: str = "cpu",
 ) -> TrainingArguments:
     """
     创建训练参数
@@ -66,6 +67,9 @@ def create_training_args(
     Returns:
         TrainingArguments
     """
+    use_fp16 = fp16 and device_type in ["cuda", "mps"]
+    use_bf16 = bf16 and device_type == "cuda"
+
     return TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_epochs,
@@ -76,8 +80,8 @@ def create_training_args(
         save_strategy=save_strategy,
         save_steps=save_steps,
         gradient_accumulation_steps=gradient_accumulation_steps,
-        fp16=fp16,
-        bf16=bf16,
+        fp16=use_fp16,
+        bf16=use_bf16,
         weight_decay=weight_decay,
         max_grad_norm=max_grad_norm,
         dataloader_num_workers=dataloader_workers,
@@ -143,7 +147,12 @@ def train(args: Dict[str, Any]) -> tuple:
     )
 
     # 创建设备
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     logger.info(f"使用设备：{device}")
 
     # 加载分词器
@@ -160,13 +169,15 @@ def train(args: Dict[str, Any]) -> tuple:
         device=device,
         trust_remote_code=args.get('trust_remote_code', True),
     )
+    if hasattr(model, "config"):
+        model.config.use_cache = False
 
     # 应用 LoRA（如果启用）
     if args.get('use_lora', True) and not args.get('full_finetune', False):
         logger.info("应用 LoRA 适配器")
         lora_config = create_lora_config(
-            r=args.get('lora_r', 8),
-            alpha=args.get('lora_alpha', 16),
+            r=args.get('lora_r', 16),
+            alpha=args.get('lora_alpha', 32),
             dropout=args.get('lora_dropout', 0.1),
             target_modules=args.get('target_modules'),
         )
@@ -198,7 +209,7 @@ def train(args: Dict[str, Any]) -> tuple:
         format_template=format_template,
         format_template_no_input=format_template_no_input
     )
-    train_dataset_obj.load().format().tokenize(tokenizer, args.get('max_length', 256))
+    train_dataset_obj.load().format().tokenize(tokenizer, args.get('max_length', 512))
     train_dataset = train_dataset_obj.to_huggingface()
 
     logger.info(f"训练样本数：{len(train_dataset)}")
@@ -212,24 +223,26 @@ def train(args: Dict[str, Any]) -> tuple:
             format_template=format_template,
             format_template_no_input=format_template_no_input
         )
-        eval_dataset_obj.load().format().tokenize(tokenizer, args.get('max_length', 256))
+        eval_dataset_obj.load().format().tokenize(tokenizer, args.get('max_length', 512))
         eval_dataset = eval_dataset_obj.to_huggingface()
 
     # 创建训练参数
     training_args = create_training_args(
         output_dir=args.get('output_dir', './output'),
         num_epochs=args.get('num_epochs', 3),
-        batch_size=args.get('batch_size', 4),
+        batch_size=args.get('batch_size', 8),
         learning_rate=args.get('learning_rate', 2e-4),
         warmup_steps=args.get('warmup_steps', 10),
         logging_steps=args.get('logging_steps', 10),
         save_strategy=args.get('save_strategy', 'epoch'),
         gradient_accumulation_steps=args.get('gradient_accumulation_steps', 2),
         fp16=args.get('fp16', True),
+        bf16=args.get('bf16', False),
         weight_decay=args.get('weight_decay', 0.01),
         seed=args.get('seed', 42),
         report_to=args.get('report_to', 'none'),
-        run_name=args.get('run_name', 'finetune'),
+        run_name=args.get('run_name', 'lora-qwen0.5b-m4'),
+        device_type=device.type,
     )
 
     # 创建 Trainer

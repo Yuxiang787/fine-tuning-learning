@@ -28,16 +28,22 @@ class Evaluator:
         adapter_path: str
     ) -> "Evaluator":
         """加载 LoRA 模型"""
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
 
         tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        # transformers >= 4.48.0 supports device_map="auto" on MPS
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
-            torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
-            device_map="auto" if device.type == "cuda" else None,
+            torch_dtype=torch.float16 if device.type in ["cuda", "mps"] else torch.float32,
+            device_map="auto" if device.type in ["cuda", "mps"] else None,
         )
 
-        if device.type != "cuda":
+        if device.type not in ["cuda", "mps"]:
             base_model = base_model.to(device)
 
         model = PeftModel.from_pretrained(base_model, adapter_path)
@@ -74,16 +80,27 @@ class Evaluator:
         # 分词
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        # 生成
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=temperature > 0,
-                temperature=temperature,
-                top_p=top_p,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
+        # 生成 - 使用 torch.amp.autocast for MPS (torch >= 2.10.0)
+        if self.device.type == "mps":
+            with torch.autocast(device_type="mps", dtype=torch.float16):
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=temperature > 0,
+                    temperature=temperature,
+                    top_p=top_p,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
+        else:
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=temperature > 0,
+                    temperature=temperature,
+                    top_p=top_p,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
 
         # 解码
         full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -171,7 +188,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="评测微调模型")
-    parser.add_argument("--base-model", type=str, default="facebook/opt-125m")
+    parser.add_argument("--base-model", type=str, default="Qwen/Qwen2.5-0.5B")
     parser.add_argument("--adapter", type=str, default="./lora_output")
     parser.add_argument("--data", type=str, default="data.jsonl")
     parser.add_argument("--num-samples", type=int, default=10)

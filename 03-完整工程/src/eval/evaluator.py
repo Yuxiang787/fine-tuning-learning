@@ -38,7 +38,12 @@ class Evaluator:
         model_path: str
     ) -> "Evaluator":
         """从微调后的模型加载"""
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
         tokenizer = load_tokenizer(model_path)
         model, _ = load_model(model_path, device)
         model.eval()
@@ -86,15 +91,27 @@ class Evaluator:
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature,
-                top_p=top_p,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
+        # Use torch.amp.autocast for MPS mixed precision inference (torch >= 2.10.0)
+        if self.device.type == "mps":
+            with torch.autocast(device_type="mps", dtype=torch.float16):
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                    top_p=top_p,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
+        else:
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                    top_p=top_p,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
 
         full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         response = full_text[len(prompt):].strip()

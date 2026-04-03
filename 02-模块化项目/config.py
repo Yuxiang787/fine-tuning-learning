@@ -12,7 +12,8 @@ import json
 @dataclass
 class ModelConfig:
     """模型配置"""
-    model_name: str = "facebook/opt-125m"
+    # M4 24GB 推荐：Qwen/Qwen2.5-0.5B (中文友好) 或 TinyLlama/TinyLlama-1.1B-Chat-v1.0
+    model_name: str = "Qwen/Qwen2.5-0.5B"
     trust_remote_code: bool = True
     use_flash_attention: bool = False
 
@@ -20,8 +21,8 @@ class ModelConfig:
 @dataclass
 class LoraConfig:
     """LoRA 配置"""
-    r: int = 8
-    alpha: int = 16
+    r: int = 16         # M4 24GB 推荐 16
+    alpha: int = 32     # 2*r
     dropout: float = 0.1
     target_modules: Optional[List[str]] = None
     bias: str = "none"
@@ -30,15 +31,15 @@ class LoraConfig:
 @dataclass
 class TrainingConfig:
     """训练配置"""
-    # 基础参数
+    # 基础参数 - M4 24GB 推荐
     output_dir: str = "./output"
     num_epochs: int = 3
-    batch_size: int = 4
+    batch_size: int = 8
     learning_rate: float = 2e-4
     warmup_steps: int = 10
 
     # 数据参数
-    max_length: int = 256
+    max_length: int = 512
     data_path: str = "data.jsonl"
 
     # 日志与保存

@@ -17,6 +17,7 @@
 """
 
 import json
+from pathlib import Path
 import torch
 from datasets import Dataset
 from transformers import (
@@ -34,25 +35,26 @@ from peft import (
 
 # ==================== 配置区域 ====================
 
-# 模型选择 - 教学建议用小模型快速验证
-# 可选：'facebook/opt-125m', 'Qwen/Qwen2.5-0.5B', 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
-MODEL_NAME = "facebook/opt-125m"
+# 模型选择 - M4 24GB 推荐
+# 可选：'facebook/opt-125m'(测试), 'Qwen/Qwen2.5-0.5B'(推荐), 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'(进阶)
+MODEL_NAME = "Qwen/Qwen2.5-0.5B"
 
 # LoRA 参数
-LORA_R = 8              # LoRA 秩，越大表达能力越强但参数量增加
-LORA_ALPHA = 16         # LoRA 缩放系数
+LORA_R = 16             # LoRA 秩，M4 24GB 可用 16
+LORA_ALPHA = 32         # LoRA 缩放系数 (2*r)
 LORA_DROPOUT = 0.1      # Dropout 比率
-TARGET_MODULES = None   # None 表示自动选择，也可手动指定如 ["q_proj", "v_proj"]
+TARGET_MODULES = None   # None 表示自动选择
 
-# 训练参数
-BATCH_SIZE = 4
+# 训练参数 - M4 24GB 推荐
+BATCH_SIZE = 8
 NUM_EPOCHS = 3
 LEARNING_RATE = 2e-4
-MAX_LENGTH = 256        # 序列最大长度
+MAX_LENGTH = 512        # M4 24GB 可用 512
 
-# 数据路径
-DATA_PATH = "data.jsonl"
-OUTPUT_DIR = "./lora_output"
+# 路径（相对脚本目录，避免从仓库根目录运行时报找不到文件）
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "data.jsonl"
+OUTPUT_DIR = BASE_DIR / "lora_output"
 
 # ==================== 工具函数 ====================
 
@@ -96,10 +98,17 @@ def main():
     print("=" * 60)
 
     # 1. 检查设备
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     print(f"\n[1] 使用设备：{device}")
     if device.type == "cpu":
-        print("    提示：CPU 训练较慢，建议使用 GPU 或 Colab")
+        print("    提示：CPU 训练较慢")
+    elif device.type == "mps":
+        print("    Apple Silicon MPS 加速已启用")
 
     # 2. 加载数据
     print(f"\n[2] 加载数据：{DATA_PATH}")
@@ -118,9 +127,11 @@ def main():
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
-        device_map=device,
+        torch_dtype=torch.float16 if device.type in ["cuda", "mps"] else torch.float32,
+        device_map="auto" if device.type in ["cuda", "mps"] else None,
     )
+    if device.type != "cuda":
+        model = model.to(device)
     print(f"    模型参数量：{model.num_parameters():,}")
 
     # 4. 配置 LoRA
@@ -154,7 +165,7 @@ def main():
         )
 
     tokenized_dataset = dataset.map(tokenize, batched=True)
-    print(f"    分词后样本形状：{tokenized_dataset[0]['input_ids'].shape}")
+    print(f"    分词后样本形状：{len(tokenized_dataset[0]['input_ids'])}")
 
     # 6. 训练配置
     print("\n[6] 配置训练参数")
@@ -166,7 +177,7 @@ def main():
         logging_steps=10,
         save_strategy="epoch",
         report_to="none",  # 禁用 wandb，如需启用可改为 "wandb"
-        fp16=device.type == "cuda",
+        fp16=device.type in ["cuda", "mps"],
         gradient_accumulation_steps=2,
         warmup_steps=10,
     )

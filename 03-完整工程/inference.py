@@ -4,8 +4,8 @@
 推理脚本 - 与微调模型交互
 
 用法:
-    python inference.py --adapter ./output/lora_opt125m
-    python inference.py --model ./output/full_opt125m
+    python inference.py --adapter ./output/lora_qwen0.5b
+    python inference.py --model ./output/full_qwen0.5b
 """
 
 import sys
@@ -82,7 +82,7 @@ def main():
     parser.add_argument(
         "--base_model",
         type=str,
-        default="facebook/opt-125m",
+        default="Qwen/Qwen2.5-0.5B",
         help="基础模型名称"
     )
     parser.add_argument(

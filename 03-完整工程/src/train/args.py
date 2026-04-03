@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="facebook/opt-125m",
+        default="Qwen/Qwen2.5-0.5B",
         help="模型名称或路径"
     )
     parser.add_argument(
@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument(
         "--max_length",
         type=int,
-        default=256,
+        default=512,
         help="最大序列长度"
     )
 
@@ -80,13 +80,13 @@ def parse_args():
     parser.add_argument(
         "--lora_r",
         type=int,
-        default=8,
+        default=16,
         help="LoRA 秩"
     )
     parser.add_argument(
         "--lora_alpha",
         type=int,
-        default=16,
+        default=32,
         help="LoRA alpha 参数"
     )
     parser.add_argument(
@@ -119,7 +119,7 @@ def parse_args():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=4,
+        default=8,
         help="批次大小"
     )
     parser.add_argument(
@@ -183,7 +183,7 @@ def parse_args():
     parser.add_argument(
         "--run_name",
         type=str,
-        default="finetune",
+        default="lora-qwen0.5b-m4",
         help="运行名称"
     )
 

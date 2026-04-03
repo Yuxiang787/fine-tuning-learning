@@ -4,8 +4,8 @@
 评测脚本
 
 用法:
-    python eval.py --adapter ./output/lora_opt125m
-    python eval.py --model ./output/full_opt125m
+    python eval.py --adapter ./output/lora_qwen0.5b
+    python eval.py --model ./output/full_qwen0.5b
     python eval.py --data eval_data.jsonl --num_samples 20
 """
 
@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         "--base_model",
         type=str,
-        default="facebook/opt-125m",
+        default="Qwen/Qwen2.5-0.5B",
         help="基础模型名称"
     )
     parser.add_argument(

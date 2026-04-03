@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="facebook/opt-125m",
+        default="Qwen/Qwen2.5-0.5B",
         help="模型名称或路径"
     )
 
@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=4,
+        default=8,
         help="批次大小"
     )
 
@@ -76,7 +76,7 @@ def parse_args():
     parser.add_argument(
         "--lora-r",
         type=int,
-        default=8,
+        default=16,
         help="LoRA 秩"
     )
 

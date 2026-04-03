@@ -68,21 +68,28 @@ def load_base_model(
         基础模型
     """
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
 
     # 确定数据类型
-    torch_dtype = torch.float16 if device.type == "cuda" else torch.float32
+    torch_dtype = torch.float16 if device.type in ["cuda", "mps"] else torch.float32
 
     # 加载模型
+    # transformers >= 4.48.0 supports device_map="auto" on MPS
+    use_device_map = device.type in ["cuda", "mps"]
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         trust_remote_code=trust_remote_code,
         torch_dtype=torch_dtype,
-        device_map="auto" if device.type == "cuda" else None,
+        device_map="auto" if use_device_map else None,
     )
 
     # 如果不用 device_map="auto"，手动移动模型
-    if device.type != "cuda":
+    if not use_device_map:
         model = model.to(device)
 
     return model
@@ -184,4 +191,9 @@ def merge_lora_weights(
 
 def get_device() -> torch.device:
     """获取当前设备"""
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    elif torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")

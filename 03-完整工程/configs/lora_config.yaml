@@ -1,26 +1,26 @@
 # LoRA 微调配置文件
-# 用于 facebook/opt-125m 模型的指令微调
+# M4 24GB 推荐配置 - Qwen2.5-0.5B 中文指令微调
 
-# 模型配置
-model_name: "facebook/opt-125m"
+# 模型配置 - M4 24GB 推荐
+model_name: "Qwen/Qwen2.5-0.5B"
 tokenizer_name: null  # null 表示使用 model_name
 
-# 数据配置
+# 数据配置 - M4 24GB
 data: "data.jsonl"
 validation_data: null
-max_length: 256
+max_length: 512
 
-# LoRA 配置
+# LoRA 配置 - M4 24GB 推荐
 use_lora: true
-lora_r: 8
-lora_alpha: 16
+lora_r: 16
+lora_alpha: 32
 lora_dropout: 0.1
 target_modules: null  # null 表示自动选择
 
-# 训练配置
-output_dir: "./output/lora_opt125m"
+# 训练配置 - M4 24GB 推荐
+output_dir: "./output/lora_qwen0.5b"
 num_epochs: 3
-batch_size: 4
+batch_size: 8
 learning_rate: 2e-4
 warmup_steps: 10
 gradient_accumulation_steps: 2
@@ -30,7 +30,7 @@ logging_steps: 10
 save_strategy: "epoch"
 save_steps: 500
 report_to: "none"  # none, wandb, tensorboard
-run_name: "lora-opt125m"
+run_name: "lora-qwen0.5b-m4"
 
 # 性能配置
 fp16: true
