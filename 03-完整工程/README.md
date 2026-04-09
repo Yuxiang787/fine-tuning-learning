@@ -13,14 +13,14 @@ pip install -r requirements.txt
 ### 2. 运行训练
 
 ```bash
-# 使用默认配置（LoRA 微调）
+# 使用默认配置（LoRA 微调，默认记录到 TensorBoard）
 python run.py
 
 # 使用配置文件
 python run.py --config configs/lora_config.yaml
 
 # 命令行覆盖配置
-python run.py --model_name Qwen/Qwen2.5-0.5B --epochs 5 --batch_size 8
+python run.py --model_name Qwen/Qwen2.5-0.5B --num_epochs 5 --batch_size 8
 
 # 全量微调
 python run.py --config configs/full_finetune_config.yaml
@@ -139,7 +139,7 @@ gradient_accumulation_steps: 8
 | `--lora_alpha` | LoRA alpha | 32 |
 | `--full_finetune` | 全量微调 | 否 |
 | `--fp16` | FP16 混合精度 | 是 |
-| `--report_to` | 日志工具 | none |
+| `--report_to` | 日志工具 | tensorboard |
 
 ### eval.py (评测)
 
@@ -236,27 +236,27 @@ evaluator.print_results(results)
 
 ### TensorBoard
 
-```bash
-# 安装
-pip install tensorboard
+TensorBoard 是当前默认日志后端，因此直接运行 `python run.py` 就会写入日志。
+项目会自动把日志写到 `output/logs/<run_name>/`；如果未指定 `run_name`，会使用默认名称。
 
-# 训练时启用
+```bash
+# 默认训练（自动写入 TensorBoard）
+python run.py --run_name my_experiment
+
+# 也可以显式指定
 python run.py --report_to tensorboard --run_name my_experiment
 
-# 查看日志
+# 查看所有运行
 tensorboard --logdir ./output/logs
 ```
 
 ### Weights & Biases
 
 ```bash
-# 安装
-pip install wandb
-
 # 登录
 wandb login
 
-# 训练时启用
+# 如需改用 W&B
 python run.py --report_to wandb --run_name my_experiment
 ```
 

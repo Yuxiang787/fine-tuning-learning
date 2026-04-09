@@ -49,7 +49,7 @@ def load_model(
     model_name: str,
     device: Optional[torch.device] = None,
     trust_remote_code: bool = True,
-    torch_dtype: Optional[torch.dtype] = None,
+    dtype: Optional[torch.dtype] = None,
     load_in_8bit: bool = False,
     load_in_4bit: bool = False,
 ) -> Tuple[PreTrainedModel, torch.device]:
@@ -60,7 +60,7 @@ def load_model(
         model_name: 模型名称或路径
         device: 设备
         trust_remote_code: 是否信任远程代码
-        torch_dtype: 数据类型
+        dtype: 数据类型
         load_in_8bit: 是否 8 位量化加载
         load_in_4bit: 是否 4 位量化加载
 
@@ -75,8 +75,11 @@ def load_model(
         else:
             device = torch.device("cpu")
 
-    if torch_dtype is None:
-        torch_dtype = torch.float16 if device.type in ["cuda", "mps"] else torch.float32
+    if dtype is None:
+        if device.type == "cuda":
+            dtype = torch.float16
+        else:
+            dtype = torch.float32
 
     if device.type == "mps" and (load_in_8bit or load_in_4bit):
         raise ValueError("MPS 设备暂不支持 bitsandbytes 4-bit/8-bit 量化加载，请关闭 load_in_4bit/load_in_8bit。")
@@ -104,7 +107,7 @@ def load_model(
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             trust_remote_code=trust_remote_code,
-            torch_dtype=torch_dtype,
+            dtype=dtype,
             device_map="auto" if use_device_map else None,
         )
 

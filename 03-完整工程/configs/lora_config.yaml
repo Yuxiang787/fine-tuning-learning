@@ -29,7 +29,7 @@ gradient_accumulation_steps: 2
 logging_steps: 10
 save_strategy: "epoch"
 save_steps: 500
-report_to: "none"  # none, wandb, tensorboard
+report_to: "tensorboard"  # none, wandb, tensorboard
 run_name: "lora-qwen0.5b-m4"
 
 # 性能配置

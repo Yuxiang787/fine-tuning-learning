@@ -176,7 +176,7 @@ def parse_args():
     parser.add_argument(
         "--report_to",
         type=str,
-        default="none",
+        default="tensorboard",
         choices=["none", "wandb", "tensorboard"],
         help="报告工具"
     )

@@ -27,7 +27,7 @@ max_grad_norm: 1.0
 # 日志与保存
 logging_steps: 10
 save_strategy: "epoch"
-report_to: "none"
+report_to: "tensorboard"
 run_name: "full-qwen0.5b-m4"
 
 # 性能配置
