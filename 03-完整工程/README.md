@@ -49,6 +49,108 @@ python inference.py --adapter ./output/lora_qwen0.5b --interactive
 python inference.py --adapter ./output --demo
 ```
 
+## API Usage In This Project
+
+This section explains how different APIs are used inside the codebase itself.
+
+### 1. `transformers` API
+
+The project uses Hugging Face `transformers` as the main model API layer.
+
+- `AutoTokenizer.from_pretrained(...)`
+  Loads the tokenizer in `src/models/loader.py`.
+- `AutoModelForCausalLM.from_pretrained(...)`
+  Loads the base causal language model in `src/models/loader.py`.
+- `TrainingArguments`
+  Defines the training configuration in `src/train/trainer.py`, including batch size, learning rate, precision, checkpoint saving, and logging backend.
+- `Trainer`
+  Runs the training loop in `src/train/trainer.py`.
+- `model.generate(...)`
+  Is used in `src/eval/evaluator.py` for inference and evaluation.
+
+So the project uses `transformers` for:
+
+```text
+load model/tokenizer -> configure training -> train -> save -> reload -> generate
+```
+
+### 2. Hugging Face Hub API
+
+When the project uses a model name like `Qwen/Qwen2.5-0.5B`, it indirectly uses the Hugging Face Hub API through `from_pretrained(...)`.
+
+That means the Hub is used to fetch:
+
+- model config
+- tokenizer config
+- model weights
+- generation config
+
+The code does not manually call HTTP endpoints. The network access happens through the Hugging Face client inside `transformers` and `huggingface_hub`.
+
+### 3. `peft` API
+
+The project uses the `peft` library for LoRA training.
+
+- `LoraConfig`
+  Built in `src/models/lora_utils.py` to describe LoRA settings such as rank, alpha, and dropout.
+- `get_peft_model(...)`
+  Wraps the base model with LoRA adapters.
+- `PeftModel.from_pretrained(...)`
+  Reloads a trained LoRA adapter for evaluation or inference.
+
+So the LoRA path is:
+
+```text
+base model -> attach LoRA adapters -> train adapters -> save adapters -> reload adapters
+```
+
+### 4. `datasets` API
+
+The project uses Hugging Face `datasets` for preprocessing training data.
+
+- `Dataset.from_list(...)`
+  Converts JSONL records into a Hugging Face dataset object in `src/data/dataset.py`.
+- `dataset.map(...)`
+  Is used twice in `src/data/dataset.py`:
+  - first to format raw examples into prompt text
+  - then to tokenize the prompt text
+
+This is the data-processing API layer between raw JSONL and model-ready inputs.
+
+### 5. TensorBoard API
+
+TensorBoard is the default experiment logging backend.
+
+- The trainer enables TensorBoard by passing `report_to="tensorboard"` into `TrainingArguments`.
+- The project sets `TENSORBOARD_LOGGING_DIR` in `src/train/trainer.py`.
+- During training, the `Trainer` integration writes event files under `output/logs/<run_name>/`.
+
+So TensorBoard is not called through custom scalar-writing code in this project; it is used through the `transformers` training integration.
+
+### 6. Weights & Biases API
+
+W&B support is optional.
+
+- The project does not directly call `wandb.init()` or `wandb.log()`.
+- Instead, it enables W&B through `TrainingArguments(report_to="wandb")`.
+- Once enabled, the `Trainer` integration inside `transformers` sends metrics to W&B.
+
+So W&B is used through the `transformers` integration API, not through handwritten W&B client calls.
+
+### 7. PyTorch API
+
+PyTorch is the execution backend under everything else.
+
+The project uses PyTorch for:
+
+- device selection (`cpu`, `cuda`, `mps`)
+- dtype selection (`float16`, `float32`)
+- tensor execution during forward and backward passes
+- gradient computation
+- optimizer updates handled by `Trainer`
+
+Most of the training loop is abstracted by `transformers.Trainer`, but the project still makes explicit PyTorch-level choices about device and dtype in the loader and trainer modules.
+
 ## 项目结构
 
 ```
