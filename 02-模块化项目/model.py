@@ -53,7 +53,8 @@ def load_base_model(
     model_name: str,
     device: Optional[torch.device] = None,
     trust_remote_code: bool = True,
-    use_flash_attention: bool = False
+    use_flash_attention: bool = False,
+    dtype: Optional[torch.dtype] = None,
 ) -> PreTrainedModel:
     """
     加载基础模型
@@ -63,6 +64,7 @@ def load_base_model(
         device: 设备
         trust_remote_code: 是否信任远程代码
         use_flash_attention: 是否使用 Flash Attention
+        dtype: 指定加载精度；为 None 时根据设备自动选择
 
     Returns:
         基础模型
@@ -76,7 +78,9 @@ def load_base_model(
             device = torch.device("cpu")
 
     # 确定数据类型
-    torch_dtype = torch.float16 if device.type in ["cuda", "mps"] else torch.float32
+    model_dtype = dtype
+    if model_dtype is None:
+        model_dtype = torch.float16 if device.type in ["cuda", "mps"] else torch.float32
 
     # 加载模型
     # transformers >= 4.48.0 supports device_map="auto" on MPS
@@ -84,7 +88,7 @@ def load_base_model(
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         trust_remote_code=trust_remote_code,
-        torch_dtype=torch_dtype,
+        dtype=model_dtype,
         device_map="auto" if use_device_map else None,
     )
 

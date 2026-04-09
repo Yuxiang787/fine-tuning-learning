@@ -5,6 +5,7 @@
 """
 
 import torch
+from math import ceil
 from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
 from config import Config
@@ -15,6 +16,37 @@ from model import (
     get_device,
 )
 from data import create_training_dataset
+
+
+def get_full_finetune_learning_rate(config: Config) -> float:
+    """全量微调的实际学习率"""
+    return config.training.learning_rate / 10
+
+
+def tune_mps_full_finetune_config(config: Config):
+    """在 MPS 上为全量微调调整更均衡的 batch 配置"""
+    requested_batch = config.training.batch_size
+    requested_accumulation = config.training.gradient_accumulation_steps
+
+    # float32 全量微调在 MPS 上显存压力较大，先把单卡 batch 控制在 2。
+    per_device_batch = min(requested_batch, 2)
+
+    # 尽量维持用户期望的有效 batch；默认至少保留 8 作为较实用的训练规模。
+    target_effective_batch = max(requested_batch, 8)
+    accumulation = max(
+        requested_accumulation,
+        ceil(target_effective_batch / per_device_batch),
+    )
+
+    config.training.batch_size = per_device_batch
+    config.training.gradient_accumulation_steps = accumulation
+
+    print(
+        "检测到 MPS，已调整全量微调批次配置："
+        f"每设备批次 {requested_batch} -> {per_device_batch}，"
+        f"梯度累积 {requested_accumulation} -> {accumulation}，"
+        f"有效批次 -> {per_device_batch * accumulation}"
+    )
 
 
 def create_full_finetune_trainer(
@@ -33,7 +65,7 @@ def create_full_finetune_trainer(
     """
 
     # 全量微调通常需要更小的学习率
-    learning_rate = config.training.learning_rate / 10  # 1e-5 量级
+    learning_rate = get_full_finetune_learning_rate(config)  # 1e-5 量级
 
     training_args = TrainingArguments(
         output_dir=config.training.output_dir,
@@ -45,8 +77,9 @@ def create_full_finetune_trainer(
         save_strategy=config.training.save_strategy,
         save_total_limit=config.training.save_total_limit,
         gradient_accumulation_steps=config.training.gradient_accumulation_steps,
-        fp16=config.training.fp16 and get_device().type in ["cuda", "mps"],
+        fp16=config.training.fp16 and get_device().type == "cuda",
         dataloader_num_workers=config.training.dataloader_num_workers,
+        dataloader_pin_memory=get_device().type == "cuda",
         seed=config.training.seed,
         report_to=config.training.report_to,
         # 全量微调特有参数
@@ -67,6 +100,34 @@ def create_full_finetune_trainer(
     )
 
 
+def print_runtime_summary(
+    config: Config,
+    device: torch.device,
+    train_dataset_size: int,
+    learning_rate: float,
+):
+    """打印训练运行时摘要"""
+    per_device_batch = config.training.batch_size
+    accumulation = config.training.gradient_accumulation_steps
+    effective_batch = per_device_batch * accumulation
+    steps_per_epoch = ceil(train_dataset_size / effective_batch) if train_dataset_size > 0 else 0
+    total_steps = steps_per_epoch * config.training.num_epochs
+    precision = "fp16" if config.training.fp16 and device.type == "cuda" else "fp32"
+
+    print("\n运行参数:")
+    print("  模式：全量微调")
+    print(f"  设备：{device}")
+    print(f"  精度：{precision}")
+    print(f"  每设备批次：{per_device_batch}")
+    print(f"  梯度累积：{accumulation}")
+    print(f"  有效批次：{effective_batch}")
+    print(f"  最大长度：{config.training.max_length}")
+    print(f"  实际学习率：{learning_rate}")
+    print(f"  每轮更新步数：{steps_per_epoch}")
+    print(f"  总训练步数：{total_steps}")
+    print(f"  Logging steps：{config.training.logging_steps}")
+
+
 def train_full(config: Config) -> tuple:
     """
     执行全量微调训练
@@ -80,6 +141,9 @@ def train_full(config: Config) -> tuple:
     device = get_device()
     print(f"使用设备：{device}")
 
+    if device.type == "mps":
+        tune_mps_full_finetune_config(config)
+
     # 1. 加载分词器
     print(f"\n加载分词器：{config.model.model_name}")
     tokenizer = load_tokenizer(config.model.model_name)
@@ -90,6 +154,7 @@ def train_full(config: Config) -> tuple:
         config.model.model_name,
         device=device,
         trust_remote_code=config.model.trust_remote_code,
+        dtype=torch.float32 if device.type == "mps" else None,
     )
 
     # 3. 打印模型信息（全量微调时所有参数都可训练）
@@ -105,6 +170,12 @@ def train_full(config: Config) -> tuple:
         config.training.max_length
     )
     print(f"训练样本数：{len(train_dataset)}")
+    print_runtime_summary(
+        config=config,
+        device=device,
+        train_dataset_size=len(train_dataset),
+        learning_rate=get_full_finetune_learning_rate(config),
+    )
 
     # 5. 创建 Trainer
     print("\n创建 Trainer（全量微调模式）")

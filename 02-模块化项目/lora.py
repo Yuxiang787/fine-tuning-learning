@@ -5,6 +5,7 @@ LoRA 微调主模块
 """
 
 import torch
+from math import ceil
 from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
 from config import Config
@@ -47,8 +48,9 @@ def create_trainer(
         save_strategy=config.training.save_strategy,
         save_total_limit=config.training.save_total_limit,
         gradient_accumulation_steps=config.training.gradient_accumulation_steps,
-        fp16=config.training.fp16 and get_device().type in ["cuda", "mps"],
+        fp16=config.training.fp16 and get_device().type == "cuda",
         dataloader_num_workers=config.training.dataloader_num_workers,
+        dataloader_pin_memory=get_device().type == "cuda",
         seed=config.training.seed,
         report_to=config.training.report_to,
     )
@@ -64,6 +66,35 @@ def create_trainer(
         train_dataset=train_dataset,
         data_collator=data_collator,
     )
+
+
+def print_runtime_summary(
+    config: Config,
+    device: torch.device,
+    train_dataset_size: int,
+    mode_name: str,
+    learning_rate: float,
+):
+    """打印训练运行时摘要"""
+    per_device_batch = config.training.batch_size
+    accumulation = config.training.gradient_accumulation_steps
+    effective_batch = per_device_batch * accumulation
+    steps_per_epoch = ceil(train_dataset_size / effective_batch) if train_dataset_size > 0 else 0
+    total_steps = steps_per_epoch * config.training.num_epochs
+    precision = "fp16" if config.training.fp16 and device.type == "cuda" else "fp32"
+
+    print("\n运行参数:")
+    print(f"  模式：{mode_name}")
+    print(f"  设备：{device}")
+    print(f"  精度：{precision}")
+    print(f"  每设备批次：{per_device_batch}")
+    print(f"  梯度累积：{accumulation}")
+    print(f"  有效批次：{effective_batch}")
+    print(f"  最大长度：{config.training.max_length}")
+    print(f"  学习率：{learning_rate}")
+    print(f"  每轮更新步数：{steps_per_epoch}")
+    print(f"  总训练步数：{total_steps}")
+    print(f"  Logging steps：{config.training.logging_steps}")
 
 
 def train_lora(config: Config) -> tuple:
@@ -107,6 +138,13 @@ def train_lora(config: Config) -> tuple:
         config.training.max_length
     )
     print(f"训练样本数：{len(train_dataset)}")
+    print_runtime_summary(
+        config=config,
+        device=device,
+        train_dataset_size=len(train_dataset),
+        mode_name="LoRA",
+        learning_rate=config.training.learning_rate,
+    )
 
     # 5. 创建 Trainer
     print("\n创建 Trainer")

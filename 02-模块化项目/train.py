@@ -118,10 +118,13 @@ def main():
     print(f"数据：{config.training.data_path}")
     print(f"输出：{config.training.output_dir}")
     print(f"轮数：{config.training.num_epochs}")
-    print(f"批次：{config.training.batch_size}")
+    print(f"请求批次：{config.training.batch_size}")
     print(f"学习率：{config.training.learning_rate}")
+    print(f"梯度累积：{config.training.gradient_accumulation_steps}")
+    print(f"最大长度：{config.training.max_length}")
     if config.use_lora:
         print(f"LoRA 秩：{config.lora.r}")
+    print("实际运行参数会在设备检查后再次打印")
     print("=" * 60)
 
     if config.use_lora:

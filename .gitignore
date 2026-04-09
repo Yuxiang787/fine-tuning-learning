@@ -47,14 +47,24 @@ env/
 *.safetensors
 checkpoint/
 checkpoints/
+checkpoint-*/
+**/checkpoint-*/
 models/
 *.onnx
 lora_output/
+output/
+*/output/
+full_output/
+*/full_output/
 adapter_model.safetensors
 
 # Logs
 *.log
 logs/
+runs/
+wandb/
+**/wandb/
+events.out.tfevents.*
 
 # Environment variables
 .env

@@ -57,9 +57,9 @@ def format_example(
     Returns:
         包含 formatted_text 的新字典
     """
-    instruction = example.get(config.data.instruction_column, "")
-    input_text = example.get(config.data.input_column, "")
-    output_text = example.get(config.data.output_column, "")
+    instruction = example.get(config.instruction_column, "")
+    input_text = example.get(config.input_column, "")
+    output_text = example.get(config.output_column, "")
 
     # 根据是否有 input 选择模板
     if input_text:
