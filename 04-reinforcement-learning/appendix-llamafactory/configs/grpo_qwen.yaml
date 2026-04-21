@@ -1,0 +1,40 @@
+### GRPO Training with LlamaFactory (via EasyR1)
+### Equivalent to: 03-off-policy/grpo_train.py
+### Docs: https://llamafactory.readthedocs.io/en/latest/advanced/trainers.html
+### EasyR1: https://github.com/hiyouga/LLaMA-Factory/tree/main/examples/train_grpo
+
+### Model
+model_name_or_path: Qwen/Qwen2.5-0.5B-Instruct
+
+### Method
+stage: grpo
+do_train: true
+finetuning_type: lora
+lora_target: all
+
+### Dataset
+# GRPO requires a dataset with 'prompt' column and verifiable answers
+# Use a math/reasoning dataset, or provide your own with reward_model
+dataset: math_en_demo
+template: qwen
+cutoff_len: 1024
+
+### Output
+output_dir: outputs/grpo_llamafactory
+logging_steps: 10
+save_steps: 200
+plot_loss: true
+overwrite_output_dir: true
+
+### Training hyperparameters
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+learning_rate: 1.0e-5
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+fp16: true
+
+### GRPO-specific
+# Number of responses generated per prompt (G in the paper)
+grpo_num_generations: 4
