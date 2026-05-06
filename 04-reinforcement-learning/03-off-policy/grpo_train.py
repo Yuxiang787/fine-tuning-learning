@@ -24,7 +24,8 @@ import re
 
 import torch
 from datasets import Dataset
-from trl import GRPOConfig, GRPOTrainer
+from trl.trainer.grpo_config import GRPOConfig
+from trl.trainer.grpo_trainer import GRPOTrainer
 
 # ── Config ────────────────────────────────────────────────────────────────────
 

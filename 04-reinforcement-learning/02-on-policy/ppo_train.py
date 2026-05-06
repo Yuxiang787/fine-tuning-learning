@@ -22,17 +22,16 @@ from pathlib import Path
 
 import torch
 from datasets import Dataset
-from transformers import AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
 
 # PPO has moved to trl.experimental.ppo as of TRL 0.9+
 from trl.experimental.ppo import (
-    AutoModelForCausalLMWithValueHead,
     PPOConfig,
     PPOTrainer,
 )
 
 sys.path.insert(0, str(Path(__file__).parent))
-from reward_model import load_reward_model, load_reward_tokenizer
+from reward_model import load_trl_reward_model
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
@@ -50,25 +49,29 @@ print(f"Device: {device}")
 
 data_path = Path(__file__).parent.parent / "01-fundamentals" / "data.jsonl"
 records = [json.loads(line) for line in data_path.read_text().splitlines()]
-dataset = Dataset.from_list([{"prompt": r["prompt"]} for r in records])
 
 # ── Models ───────────────────────────────────────────────────────────────────
 
 print("Loading models (this may take a few minutes)...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "left"  # required for correct generation with decoder-only models
 
-# Policy + value model: same base weights, value head added on top
-model = AutoModelForCausalLMWithValueHead.from_pretrained(MODEL_NAME)
+dataset = Dataset.from_list([{"prompt": r["prompt"]} for r in records])
+dataset = dataset.map(
+    lambda ex: tokenizer(ex["prompt"], truncation=True, max_length=256),
+    remove_columns=["prompt"],
+)
 
-# Reference model: frozen copy of the initial policy — used for KL penalty
-ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(MODEL_NAME)
+model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+ref_model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 
-# Value model: predicts expected future reward (critic in actor-critic)
-value_model = AutoModelForCausalLMWithValueHead.from_pretrained(MODEL_NAME)
+# value_model must be AutoModelForSequenceClassification — PPOTrainer's
+# PolicyAndValueWrapper accesses value_model.base_model_prefix and value_model.score()
+value_model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=1)
 
-# Reward model: scores each generated response
-reward_model = load_reward_model(device)
+# reward_model also needs base_model_prefix + score() interface (TRL get_reward contract)
+reward_model = load_trl_reward_model(tokenizer, device)
 
 # ── PPO Config ───────────────────────────────────────────────────────────────
 
